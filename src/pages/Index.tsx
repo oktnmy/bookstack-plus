@@ -38,7 +38,43 @@ export default function Index() {
   const availableBooks = books?.reduce((sum, book) => sum + book.available_copies, 0) || 0;
   const borrowedBooks = books?.reduce((sum, book) => sum + (book.total_copies - book.available_copies), 0) || 0;
 
-  const stats = [
+  // Different stats for students vs admins
+  const studentStats = [
+    {
+      title: "Available Books",
+      value: availableBooks.toString(),
+      change: `${totalBooks} total books`,
+      changeType: "positive" as const,
+      icon: BookOpen,
+      description: "Ready to borrow"
+    },
+    {
+      title: "My Borrowed",
+      value: "0", // This would come from user's borrowing records
+      change: "No overdue items",
+      changeType: "positive" as const,
+      icon: Clock,
+      description: "Currently checked out"
+    },
+    {
+      title: "Fiction",
+      value: books?.filter(book => book.genre === 'Fiction').length.toString() || "0",
+      change: "Popular genre",
+      changeType: "positive" as const,
+      icon: BookOpen,
+      description: "Stories & novels"
+    },
+    {
+      title: "New Arrivals",
+      value: "5",
+      change: "This week",
+      changeType: "positive" as const,
+      icon: BookOpen,
+      description: "Fresh additions"
+    }
+  ];
+
+  const adminStats = [
     {
       title: "Total Books",
       value: totalBooks.toString(),
@@ -73,6 +109,8 @@ export default function Index() {
     }
   ];
 
+  const stats = profile?.role === 'member' ? studentStats : adminStats;
+
   const recentBooks = books?.slice(0, 6) || [];
 
   // Mock recent activity for now
@@ -87,9 +125,15 @@ export default function Index() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Library Dashboard</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {profile?.role === 'member' ? 'My Library' : 'Library Dashboard'}
+            </h1>
             <p className="text-muted-foreground">
-              Welcome back, {profile?.full_name || 'User'}! Here's your library overview.
+              Welcome back, {profile?.full_name || 'User'}! 
+              {profile?.role === 'member' 
+                ? " Browse and manage your borrowed books." 
+                : " Here's your library overview."
+              }
             </p>
           </div>
           <div className="flex gap-3">
@@ -97,10 +141,12 @@ export default function Index() {
               <Search className="w-4 h-4" />
               Search Books
             </Button>
-            <Button className="gap-2 bg-gradient-primary">
-              <Plus className="w-4 h-4" />
-              Add New Book
-            </Button>
+            {(profile?.role === 'admin' || profile?.role === 'librarian') && (
+              <Button className="gap-2 bg-gradient-primary">
+                <Plus className="w-4 h-4" />
+                Add New Book
+              </Button>
+            )}
           </div>
         </div>
 
@@ -119,10 +165,13 @@ export default function Index() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-primary" />
-                  Available Books
+                  {profile?.role === 'member' ? 'Browse Books' : 'Available Books'}
                 </CardTitle>
                 <CardDescription>
-                  Browse our collection of {totalBooks} books
+                  {profile?.role === 'member' 
+                    ? `Discover from our collection of ${totalBooks} books`
+                    : `Browse our collection of ${totalBooks} books`
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -154,12 +203,12 @@ export default function Index() {
                         }}
                         compact
                         onView={(id) => console.log('View book:', id)}
-                        onEdit={(id) => console.log('Edit book:', id)}
-                        onDelete={(id) => console.log('Delete book:', id)}
+                        onEdit={profile?.role !== 'member' ? (id) => console.log('Edit book:', id) : undefined}
+                        onDelete={profile?.role === 'admin' ? (id) => console.log('Delete book:', id) : undefined}
                       />
                     ))}
                     <Button variant="outline" className="w-full">
-                      View All Books
+                      {profile?.role === 'member' ? 'Browse All Books' : 'View All Books'}
                     </Button>
                   </>
                 )}
@@ -204,31 +253,57 @@ export default function Index() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Different for students vs admins */}
         <Card className="shadow-soft">
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common library management tasks</CardDescription>
+            <CardDescription>
+              {profile?.role === 'member' 
+                ? 'Browse and manage your reading' 
+                : 'Common library management tasks'
+              }
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button variant="outline" className="h-24 flex-col gap-2">
-                <BookOpen className="w-6 h-6" />
-                <span>Add Book</span>
-              </Button>
-              <Button variant="outline" className="h-24 flex-col gap-2">
-                <Users className="w-6 h-6" />
-                <span>Manage Users</span>
-              </Button>
-              <Button variant="outline" className="h-24 flex-col gap-2">
-                <Clock className="w-6 h-6" />
-                <span>Borrow Book</span>
-              </Button>
-              <Button variant="outline" className="h-24 flex-col gap-2">
-                <AlertTriangle className="w-6 h-6" />
-                <span>Overdue Items</span>
-              </Button>
-            </div>
+            {profile?.role === 'member' ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Button variant="outline" className="h-24 flex-col gap-2">
+                  <Search className="w-6 h-6" />
+                  <span>Browse Books</span>
+                </Button>
+                <Button variant="outline" className="h-24 flex-col gap-2">
+                  <Clock className="w-6 h-6" />
+                  <span>My Borrowed</span>
+                </Button>
+                <Button variant="outline" className="h-24 flex-col gap-2">
+                  <BookOpen className="w-6 h-6" />
+                  <span>Reading List</span>
+                </Button>
+                <Button variant="outline" className="h-24 flex-col gap-2">
+                  <Users className="w-6 h-6" />
+                  <span>My Profile</span>
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Button variant="outline" className="h-24 flex-col gap-2">
+                  <BookOpen className="w-6 h-6" />
+                  <span>Add Book</span>
+                </Button>
+                <Button variant="outline" className="h-24 flex-col gap-2">
+                  <Users className="w-6 h-6" />
+                  <span>Manage Users</span>
+                </Button>
+                <Button variant="outline" className="h-24 flex-col gap-2">
+                  <Clock className="w-6 h-6" />
+                  <span>Borrow Book</span>
+                </Button>
+                <Button variant="outline" className="h-24 flex-col gap-2">
+                  <AlertTriangle className="w-6 h-6" />
+                  <span>Overdue Items</span>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
